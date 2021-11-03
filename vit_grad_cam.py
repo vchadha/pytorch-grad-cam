@@ -26,6 +26,7 @@ target_layers = [model.blocks[-1].norm1]
 cam = GradCAM(model=model,
             target_layers=target_layers,
             use_cuda=False,
+            # reshape_transform=None)
             reshape_transform=reshape_transform)
 
 # image_path = './examples/both.png'
@@ -35,6 +36,22 @@ rgb_img = cv2.resize(rgb_img, (224, 224))
 rgb_img = np.float32(rgb_img) / 255
 input_tensor = preprocess_image(rgb_img, mean=[0.5, 0.5, 0.5],
                                 std=[0.5, 0.5, 0.5])
+
+# compute the predictions
+out = model(input_tensor)
+
+# and convert them into probabilities
+scores = torch.nn.functional.softmax(out, dim=-1)[0]
+
+# finally get the index of the prediction with highest score
+topk_scores, topk_label = torch.topk(scores, k=5, dim=-1)
+
+with open("imagenet_classes.txt", "r") as f:
+    imagenet_categories = [s.strip() for s in f.readlines()]
+
+for i in range(5):
+  pred_name = imagenet_categories[topk_label[i]]
+  print(f"Prediction index {i}: {pred_name:<25}, score: {topk_scores[i].item():.3f}")
 
 # If None, returns the map for the highest scoring category.
 # Otherwise, targets the requested category.

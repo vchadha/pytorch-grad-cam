@@ -1,5 +1,6 @@
 import numpy as np
 from pytorch_grad_cam.base_cam import BaseCAM
+from pytorch_grad_cam.base_cam_detr import BaseCAMDETR
 
 
 class GradCAM(BaseCAM):
@@ -7,6 +8,25 @@ class GradCAM(BaseCAM):
                  reshape_transform=None):
         super(
             GradCAM,
+            self).__init__(
+            model,
+            target_layers,
+            use_cuda,
+            reshape_transform)
+
+    def get_cam_weights(self,
+                        input_tensor,
+                        target_layer,
+                        target_category,
+                        activations,
+                        grads):
+        return np.mean(grads, axis=(2, 3))
+
+class GradCAM_DETR(BaseCAMDETR):
+    def __init__(self, model, target_layers, use_cuda=False,
+                 reshape_transform=None):
+        super(
+            GradCAM_DETR,
             self).__init__(
             model,
             target_layers,

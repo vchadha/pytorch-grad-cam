@@ -13,6 +13,10 @@ from torchvision.models import resnet50
 import torchvision.transforms as T
 torch.set_grad_enabled(False);
 
+from pytorch_grad_cam import GradCAM_DETR
+from pytorch_grad_cam.utils.image import show_cam_on_image, \
+    preprocess_image
+
 # COCO classes
 CLASSES = [
     'N/A', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
@@ -34,6 +38,16 @@ CLASSES = [
 # colors for visualization
 COLORS = [[0.000, 0.447, 0.741], [0.850, 0.325, 0.098], [0.929, 0.694, 0.125],
           [0.494, 0.184, 0.556], [0.466, 0.674, 0.188], [0.301, 0.745, 0.933]]
+
+# reshape for vit output?
+def reshape_transform(tensor, height=14, width=14):
+    result = tensor[:, 1:, :].reshape(tensor.size(0),
+                                      height, width, tensor.size(2))
+
+    # Bring the channels to the first dimension,
+    # like in CNNs.
+    result = result.transpose(2, 3).transpose(1, 2)
+    return result
 
 # standard PyTorch mean-std input image normalization
 transform = T.Compose([
@@ -72,6 +86,8 @@ def plot_results(pil_img, prob, boxes):
 
 model = torch.hub.load('facebookresearch/detr', 'detr_resnet50', pretrained=True)
 
+# print(model.transformer.decoder.norm)
+
 url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
 im = Image.open(requests.get(url, stream=True).raw)
 
@@ -89,3 +105,41 @@ keep = probas.max(-1).values > 0.9
 bboxes_scaled = rescale_bboxes(outputs['pred_boxes'][0, keep], im.size)
 
 plot_results(im, probas[keep], bboxes_scaled)
+
+# Grad cam time!
+# target_layers = [model.blocks[-1].norm1]
+target_layers = [model.transformer.decoder.norm]
+
+# image_path = './examples/dog_cat.jfif'
+# rgb_img = cv2.imread(image_path, 1)[:, :, ::-1]
+# rgb_img = cv2.resize(rgb_img, (224, 224))
+# rgb_img = np.float32(rgb_img) / 255
+# input_tensor = preprocess_image(rgb_img, mean=[0.5, 0.5, 0.5],
+#                                 std=[0.5, 0.5, 0.5])
+
+print( img.shape )
+
+cam = GradCAM_DETR(model=model,
+            target_layers=target_layers,
+            use_cuda=False,
+            reshape_transform=None)
+            # reshape_transform=reshape_transform)
+
+# If None, returns the map for the highest scoring category.
+# Otherwise, targets the requested category.
+target_category = None
+
+# AblationCAM and ScoreCAM have batched implementations.
+# You can override the internal batch size for faster computation.
+cam.batch_size = 32
+
+grayscale_cam = cam(input_tensor=img,
+                    target_category=target_category,
+                    eigen_smooth=False,
+                    aug_smooth=False)
+
+# Here grayscale_cam has only one image in the batch
+grayscale_cam = grayscale_cam[0, :]
+
+cam_image = show_cam_on_image(rgb_img, grayscale_cam)
+cv2.imwrite('detr_cam.jpg', cam_image)
