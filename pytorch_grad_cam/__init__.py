@@ -1,5 +1,4 @@
 from pytorch_grad_cam.grad_cam import GradCAM
-from pytorch_grad_cam.grad_cam import GradCAM_DETR
 from pytorch_grad_cam.ablation_cam import AblationCAM
 from pytorch_grad_cam.xgrad_cam import XGradCAM
 from pytorch_grad_cam.grad_cam_plusplus import GradCAMPlusPlus

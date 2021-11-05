@@ -15,7 +15,7 @@ from torchvision.models import resnet50
 import torchvision.transforms as T
 # torch.set_grad_enabled(False);
 
-from pytorch_grad_cam import GradCAM_DETR
+from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image, \
     preprocess_image
 
@@ -50,6 +50,18 @@ def reshape_transform(tensor, height=14, width=14):
     # like in CNNs.
     result = result.transpose(2, 3).transpose(1, 2)
     return result
+
+def extract_output(output, target_category):
+    with torch.no_grad():
+        logits_bbox_id = output['pred_logits'][0, :, target_category].argmax()
+
+    loss = output['pred_logits'][0, logits_bbox_id, target_category]
+
+    return loss
+
+def get_target_category( output ):
+    target_category = np.unique(np.argmax(output['pred_logits'].cpu().data.numpy(), axis=-1))
+    return target_category
 
 # standard PyTorch mean-std input image normalization
 transform = T.Compose([
@@ -94,7 +106,8 @@ for p in model.parameters():
 # print(model.transformer.decoder.norm)
 
 # url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
-url = 'https://live-production.wcms.abc-cdn.net.au/09fc4d971d2ae450966dd606be4d3587?impolicy=wcms_crop_resize&cropH=1152&cropW=2048&xPos=0&yPos=417&width=862&height=485'
+# url = 'https://live-production.wcms.abc-cdn.net.au/09fc4d971d2ae450966dd606be4d3587?impolicy=wcms_crop_resize&cropH=1152&cropW=2048&xPos=0&yPos=417&width=862&height=485'
+url = 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.nme.com%2Fwp-content%2Fuploads%2F2019%2F07%2Fcats-2019-movie-taylor-swift-credit-universal-pictures%402000x1270.jpg&f=1&nofb=1'
 im = Image.open(requests.get(url, stream=True).raw)
 
 # mean-std normalize the input image (batch-size: 1)
@@ -117,18 +130,14 @@ plot_results(im, probas[keep], bboxes_scaled)
 # target_layers = [model.transformer.decoder.norm]
 target_layers = [model.input_proj]
 
-# image_path = './examples/dog_cat.jfif'
-# rgb_img = cv2.imread(image_path, 1)[:, :, ::-1]
-# rgb_img = im
-# rgb_img = cv2.resize(rgb_img, (800, 800))
-# rgb_img = np.float32(rgb_img) / 255
-
 print( img.shape )
 
-cam = GradCAM_DETR(model=model,
+cam = GradCAM(model=model,
             target_layers=target_layers,
             use_cuda=False,
-            reshape_transform=None)
+            reshape_transform=None,
+            extract_output=extract_output,
+            get_target_category=get_target_category)
             # reshape_transform=reshape_transform)
 
 # If None, returns the map for the highest scoring category.

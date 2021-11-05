@@ -12,6 +12,8 @@ class BaseCAM:
                  target_layers,
                  use_cuda=False,
                  reshape_transform=None,
+                 extract_output=None,
+                 get_target_category=None,
                  compute_input_gradient=False,
                  uses_gradients=True):
         self.model = model.eval()
@@ -20,6 +22,8 @@ class BaseCAM:
         if self.cuda:
             self.model = model.cuda()
         self.reshape_transform = reshape_transform
+        self.extract_output = extract_output
+        self.get_target_category = get_target_category
         self.compute_input_gradient = compute_input_gradient
         self.uses_gradients = uses_gradients
         self.activations_and_grads = ActivationsAndGradients(
@@ -40,7 +44,10 @@ class BaseCAM:
     def get_loss(self, output, target_category):
         loss = 0
         for i in range(len(target_category)):
-            loss = loss + output[i, target_category[i]]
+            if self.extract_output:
+                loss = loss + self.extract_output(output, target_category[i])
+            else:
+                loss = loss + output[i, target_category[i]]
         return loss
 
     def get_cam_image(self,
@@ -72,7 +79,10 @@ class BaseCAM:
             target_category = [target_category] * input_tensor.size(0)
 
         if target_category is None:
-            target_category = np.argmax(output.cpu().data.numpy(), axis=-1)
+            if self.get_target_category:
+                target_category = self.get_target_category(output)
+            else:
+                target_category = np.argmax(output.cpu().data.numpy(), axis=-1)
         else:
             assert(len(target_category) == input_tensor.size(0))
 
