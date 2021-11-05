@@ -29,8 +29,8 @@ cam = GradCAM(model=model,
             # reshape_transform=None)
             reshape_transform=reshape_transform)
 
-# image_path = './examples/both.png'
-image_path = './examples/dog_cat.jfif'
+image_path = './examples/both.png'
+# image_path = './examples/dog_cat.jfif'
 rgb_img = cv2.imread(image_path, 1)[:, :, ::-1]
 rgb_img = cv2.resize(rgb_img, (224, 224))
 rgb_img = np.float32(rgb_img) / 255

@@ -1,4 +1,6 @@
 import math
+import cv2
+import numpy as np
 
 from PIL import Image
 import requests
@@ -11,7 +13,7 @@ import torch
 from torch import nn
 from torchvision.models import resnet50
 import torchvision.transforms as T
-torch.set_grad_enabled(False);
+# torch.set_grad_enabled(False);
 
 from pytorch_grad_cam import GradCAM_DETR
 from pytorch_grad_cam.utils.image import show_cam_on_image, \
@@ -86,9 +88,13 @@ def plot_results(pil_img, prob, boxes):
 
 model = torch.hub.load('facebookresearch/detr', 'detr_resnet50', pretrained=True)
 
+for p in model.parameters():
+    p.requires_grad = True
+
 # print(model.transformer.decoder.norm)
 
-url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
+# url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
+url = 'https://live-production.wcms.abc-cdn.net.au/09fc4d971d2ae450966dd606be4d3587?impolicy=wcms_crop_resize&cropH=1152&cropW=2048&xPos=0&yPos=417&width=862&height=485'
 im = Image.open(requests.get(url, stream=True).raw)
 
 # mean-std normalize the input image (batch-size: 1)
@@ -108,14 +114,14 @@ plot_results(im, probas[keep], bboxes_scaled)
 
 # Grad cam time!
 # target_layers = [model.blocks[-1].norm1]
-target_layers = [model.transformer.decoder.norm]
+# target_layers = [model.transformer.decoder.norm]
+target_layers = [model.input_proj]
 
 # image_path = './examples/dog_cat.jfif'
 # rgb_img = cv2.imread(image_path, 1)[:, :, ::-1]
-# rgb_img = cv2.resize(rgb_img, (224, 224))
+# rgb_img = im
+# rgb_img = cv2.resize(rgb_img, (800, 800))
 # rgb_img = np.float32(rgb_img) / 255
-# input_tensor = preprocess_image(rgb_img, mean=[0.5, 0.5, 0.5],
-#                                 std=[0.5, 0.5, 0.5])
 
 print( img.shape )
 
@@ -127,6 +133,7 @@ cam = GradCAM_DETR(model=model,
 
 # If None, returns the map for the highest scoring category.
 # Otherwise, targets the requested category.
+# target_category = 17
 target_category = None
 
 # AblationCAM and ScoreCAM have batched implementations.
@@ -141,5 +148,13 @@ grayscale_cam = cam(input_tensor=img,
 # Here grayscale_cam has only one image in the batch
 grayscale_cam = grayscale_cam[0, :]
 
-cam_image = show_cam_on_image(rgb_img, grayscale_cam)
-cv2.imwrite('detr_cam.jpg', cam_image)
+rgb_image = im
+preprocess = T.Compose([
+    T.Resize(800),
+])
+
+rgb_image = np.array(preprocess(rgb_image)).astype(np.float32)
+rgb_image = rgb_image/255
+visualization = show_cam_on_image(rgb_image, grayscale_cam, use_rgb=False)
+
+cv2.imwrite('detr_cam.jpg', visualization)

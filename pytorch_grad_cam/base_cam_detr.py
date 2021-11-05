@@ -40,7 +40,15 @@ class BaseCAMDETR:
     def get_loss(self, output, target_category):
         loss = 0
         for i in range(len(target_category)):
-            loss = loss + output['pred_logits'][i, target_category[i]]
+            if isinstance(output, dict):
+                with torch.no_grad():
+                        logits_bbox_id = output['pred_logits'][0, :, target_category[i]].argmax()
+
+                loss = loss + output['pred_logits'][0, logits_bbox_id, target_category[i]]
+
+            else:
+                loss = loss + output[i, target_category[i]]
+
         return loss
 
     def get_cam_image(self,
@@ -72,7 +80,7 @@ class BaseCAMDETR:
             target_category = [target_category] * input_tensor.size(0)
 
         if target_category is None:
-            target_category = np.argmax(output['pred_logits'].cpu().data.numpy(), axis=-1)
+            target_category = np.unique(np.argmax(output['pred_logits'].cpu().data.numpy(), axis=-1))
         else:
             assert(len(target_category) == input_tensor.size(0))
 

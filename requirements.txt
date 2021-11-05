@@ -10,6 +10,8 @@ tqdm
 opencv-python
 timm
 
+torchinfo
+
 # DETR
 ipywidgets
 
