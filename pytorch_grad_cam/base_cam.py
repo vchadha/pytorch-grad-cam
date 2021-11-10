@@ -43,6 +43,7 @@ class BaseCAM:
 
     def get_loss(self, output, target_category):
         loss = 0
+        # TODO: make this work for multilabel classificaiton/detection and batches/multiple images
         for i in range(len(target_category)):
             if self.extract_output:
                 loss = loss + self.extract_output(output, target_category[i])

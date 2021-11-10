@@ -129,6 +129,9 @@ plot_results(im, probas[keep], bboxes_scaled)
 # target_layers = [model.blocks[-1].norm1]
 # target_layers = [model.transformer.decoder.norm]
 target_layers = [model.input_proj]
+# target_layers = [model.backbone[-2]]
+# target_layers = [model.transformer.encoder.layers[-1].self_attn]
+# target_layers = [model.transformer.decoder.layers[-1].multihead_attn]
 
 print( img.shape )
 
@@ -142,8 +145,8 @@ cam = GradCAM(model=model,
 
 # If None, returns the map for the highest scoring category.
 # Otherwise, targets the requested category.
-# target_category = 17
-target_category = None
+target_category = 17
+# target_category = None
 
 # AblationCAM and ScoreCAM have batched implementations.
 # You can override the internal batch size for faster computation.
